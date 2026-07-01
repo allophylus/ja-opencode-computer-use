@@ -12,32 +12,99 @@
 - **🛡 Safety Sandbox** — confirmation gates, filesystem sandbox, network allowlisting
 - **🖼 Vision Fallback** — optional VLM (Ollama/OpenAI) for screenshot-based element detection
 
-## Supported Platforms
+## Platform Support & Requirements
 
 | Platform | Tools Used | Status |
 |---|---|---|---|
 | Linux (X11/Wayland) | `xdotool`, `wmctrl`, `scrot`/`grim`/`import`, `xclip`/`xsel`/`wl-clipboard` | ✅ Tested |
-| macOS 12+ | `screencapture`, `osascript`, `pbpaste`, `pbcopy` (all built-in) | 🟡 Designed (untested) |
-| Windows 10+ | `powershell` + `System.Drawing`/`System.Windows.Forms` / `user32.dll` P/Invoke | 🟡 Designed (untested) |
+| macOS 12+ | `osascript`, `screencapture`, `pbpaste`, `pbcopy` (all built-in) | 🟡 Tested (community) |
+| Windows 10+ | `powershell`, `cmd.exe`, .NET Framework (built-in) | 🟡 Designed (untested) |
+
+## Permissions & Setup by OS
+
+### macOS
+
+macOS uses **built-in CLI tools** — no package install needed. However, **two system permissions** must be granted:
+
+| Permission | Required For | How to Grant |
+|---|---|---|
+| **Accessibility** | Input simulation (click, type, key press, scroll, drag), window listing, accessibility tree | System Settings → Privacy & Security → Accessibility → add your terminal app |
+| **Screen Recording** | Screen capture (`screencapture`) | System Settings → Privacy & Security → Screen Recording → add your terminal app |
+
+> **Important:** Grant these permissions to the app that runs the `ocu` binary (e.g. Terminal, iTerm2, Warp, VS Code). If `ocu` runs as an MCP subprocess, you may need to grant permissions to the host app (e.g. Terminal if you launched opencode from it).
+
+**Verification:**
+```bash
+# Check if osascript can list windows (requires Accessibility)
+osascript -e 'tell app "System Events" to get name of every window of every process'
+
+# Check if screencapture works (requires Screen Recording)
+screencapture -x /tmp/test-capture.png && open /tmp/test-capture.png
+```
+
+**Setup:**
+```bash
+# All tools are built-in — no packages to install
+./scripts/setup.sh
+```
+
+### Linux (X11)
+
+Linux uses external CLI tools that must be installed via your package manager:
+
+| Tool | Required For | Package Name |
+|---|---|---|
+| `xdotool` | Mouse, keyboard, window search, geometry | `xdotool` |
+| `wmctrl` | Window listing and focus | `wmctrl` |
+| `scrot` *or* `import` (ImageMagick) | Screen capture (X11) | `scrot` or `imagemagick` |
+| `xclip` *or* `xsel` | Clipboard read/write (X11) | `xclip` or `xsel` |
+| `xdpyinfo` (from `x11-utils`) | Display dimensions | `x11-utils` |
+
+**Wayland alternatives:**
+
+| Tool | Required For | Package Name |
+|---|---|---|
+| `grim` + `slurp` | Screen capture | `grim`, `slurp` |
+| `wl-clipboard` | Clipboard read/write | `wl-clipboard` |
+
+**Permissions:**
+- No OS-level permission grants needed
+- `xdotool` needs access to the X11 display (`$DISPLAY` must be set, typically `:0`)
+- On Wayland, `xdotool`/`wmctrl` may not work — use the Wayland alternatives above
+
+**Setup:**
+```bash
+./scripts/setup.sh            # auto-detects display server and installs appropriate tools
+```
+
+### Windows
+
+Windows uses **built-in tools** — no package install needed.
+
+| Tool | Required For | Availability |
+|---|---|---|
+| `powershell.exe` | All operations (mouse, keyboard, screenshot, clipboard, windows) | Built-in (Windows 10+) |
+| `cmd.exe` | Shell command execution | Built-in |
+| .NET Framework | `System.Drawing`, `System.Windows.Forms` for screenshot/mouse/keyboard | Built-in (Windows 10+) |
+
+**Permissions:**
+- No special OS-level permissions required for default operation
+- PowerShell execution policy must allow script execution (typically already set)
+- Some operations (e.g. window enumeration via `user32.dll` P/Invoke) are always allowed
+
+**Setup:**
+```bash
+./scripts/setup.sh            # verifies PowerShell availability
+```
 
 ## Quick Start
 
-### 1. Install Dependencies
+### 1. Install Dependencies & Permissions
 
-Use the setup script for your platform:
+Follow the per-OS guide above to install tools (Linux) or grant permissions (macOS), then:
 
 ```bash
-# Linux — installs xdotool, wmctrl, scrot, xclip, x11-utils
 ./scripts/setup.sh
-
-# macOS — all tools are built-in (screencapture, osascript, pbcopy, pbpaste)
-./scripts/setup.sh
-
-# Windows — all tools are built-in (PowerShell, cmd.exe)
-./scripts/setup.sh
-
-# Or install + build the binary + write a default config
-./scripts/setup.sh --all
 ```
 
 ### 2. Build
@@ -56,7 +123,20 @@ ocu --transport sse --port 8080              # SSE transport
 ocu --config ~/.config/opencode/ocu.json     # with config file
 ```
 
-### 4. Add to opencode.json
+### 4. Add to opencode.json (opencode)
+
+```json
+{
+  "mcpServers": {
+    "computer-use": {
+      "command": "/home/YOU/.local/bin/ocu",
+      "args": ["--config", "/home/YOU/.config/opencode/ocu.json"]
+    }
+  }
+}
+```
+
+### 5. Add to opencode.json (Claude Code / Cursor / other MCP clients)
 
 ```json
 {
@@ -67,31 +147,6 @@ ocu --config ~/.config/opencode/ocu.json     # with config file
       "command": "/home/YOU/.local/bin/ocu",
       "args": ["--config", "/home/YOU/.config/opencode/ocu.json"],
       "env": {}
-    }
-  }
-}
-```
-
-# Run as SSE server on port 8080
-ocu --transport sse --port 8080
-
-# Enable vision fallback
-ocu --vision --log-level debug
-
-# Use custom config
-ocu --config ~/.config/ocu/config.json
-```
-
-## Integration with opencode
-
-Add to your `opencode.json`:
-
-```json
-{
-  "mcpServers": {
-    "computer-use": {
-      "command": "ocu",
-      "args": ["--transport", "stdio"]
     }
   }
 }

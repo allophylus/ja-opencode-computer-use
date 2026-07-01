@@ -225,7 +225,8 @@ Configure via `--port` flag or `sse { port }` in config file.
 | Rate Limiting | ✅ sliding window | ✅ sliding window | ✅ sliding window |
 | SSE Transport | ✅ axum HTTP | ✅ axum HTTP | ✅ axum HTTP |
 | Single Binary | ✅ 8.7MB | ✅ 8.7MB | ✅ 8.7MB |
-| No Runtime Deps | ✅ (macOS 12+) | ✅ (Windows 10+) | ✅ (xdotool + wmctrl) |
+| No Runtime Deps | ✅ (macOS 12+, built-in CLI) | ✅ (Windows 10+, built-in) | ❌ (requires xdotool + wmctrl + screenshot tool) |
+| OS Permissions  | ✅ required (Accessibility + Screen Recording) | ❌ none needed | ❌ none needed |
 
 ---
 
@@ -234,16 +235,16 @@ Configure via `--port` flag or `sse { port }` in config file.
 | Layer | Technology | Rationale |
 |---|---|---|
 | Language | Rust 2024 edition | Performance, safety, cross-compilation, single binary |
-| MCP Protocol | `modelcontextprotocol` Rust SDK | Native MCP support for stdio and SSE transports |
-| Accessibility (macOS) | `accessibility` crate + raw `appkit` FFI | Direct AX API bindings |
-| Accessibility (Windows) | `windows` crate (UIAutomation) | Official Microsoft Rust projections |
-| Accessibility (Linux) | D-Bus via `zbus` crate (AT-SPI2) | Standard Linux accessibility protocol |
-| Screenshot (macOS) | CoreGraphics via `core-graphics` crate | Fast, zero-copy screen capture |
-| Screenshot (Windows) | `windows` crate (IDXGIOutputDuplication) | DirectX-based capture |
-| Screenshot (Linux) | `x11rb` / `wayland` crates | X11: MIT-SHM; Wayland: screencopy |
-| Input simulation (macOS) | CoreGraphics via `core-graphics` crate | CGEvent API |
-| Input simulation (Windows) | `windows` crate (SendInput) | Win32 input API |
-| Input simulation (Linux) | `x11rb` / `libei` / `enigo` | XTest or libei for Wayland |
+| MCP Protocol | Custom JSON-RPC over stdio/SSE | Lightweight, no SDK dependency |
+| Accessibility (macOS) | `osascript` (System Events) | Built-in CLI, no native crate needed |
+| Accessibility (Windows) | PowerShell + `user32.dll` P/Invoke | Built-in, no crate dependency |
+| Accessibility (Linux) | `xdotool` + `wmctrl` CLI tools | Reliable, widely available on X11 |
+| Screenshot (macOS) | `screencapture` CLI | Built-in, supports region + fullscreen |
+| Screenshot (Windows) | PowerShell + `System.Drawing` | Built-in .NET assembly |
+| Screenshot (Linux) | `import`/`scrot`/`grim` CLI | X11: ImageMagick/scrot; Wayland: grim |
+| Input simulation (macOS) | `osascript` (System Events) | Built-in, supports mouse, keyboard |
+| Input simulation (Windows) | PowerShell + `SendKeys` | Built-in .NET class |
+| Input simulation (Linux) | `xdotool` CLI | Supports mouse, keyboard, window ops |
 | Image processing | `image` crate | PNG encode/decode, resize |
 | Vision (optional) | HTTP client to VLM server | Ollama, OpenAI, or local vision model |
 | Local LLM (Ollama) | HTTP client (`reqwest`) | Zero-dependency local inference via `ollama serve` |

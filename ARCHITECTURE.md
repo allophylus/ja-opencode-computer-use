@@ -40,11 +40,11 @@
 │  ┌─────────────────────▼────────────────────────────────────┐│
 │  │  Platform Backends                                       ││
 │  │  ┌──────────────┐ ┌──────────┐ ┌──────────────────────┐  ││
-│  │  │ macOS        │ │ Windows  │ │ Linux                │  ││
-│  │  │ • AX API     │ │ • UIA    │ │ • AT-SPI2 (D-Bus)   │  ││
-│  │  │ • CGEvent    │ │ • SendInp│ │ • XTest / libei     │  ││
-│  │  │ • CGImage    │ │ • DXGI   │ │ • X11/Wayland caps  │  ││
-│  │  │ • NSPaste    │ │ • win32  │ │ • xclip/wl-clip     │  ││
+│  │  │ macOS        │ │ Windows    │ │ Linux                │  ││
+│  │  │ • osascript   │ │ • PowerShell│ │ • xdotool             │  ││
+│  │  │ • screencapture│ │ • .NET Win32│ │ • wmctrl              │  ││
+│  │  │ • pbpaste/pbcopy│ │ (built-in) │ │ • import/scrot/grim  │  ││
+│  │  │ (built-in CLI) │ │            │ │ • xclip/wl-clipboard │  ││
 │  │  └──────────────┘ └──────────┘ └──────────────────────┘  ││
 │  └──────────────────────────────────────────────────────────┘│
 └──────────────────────────────────────────────────────────────┘

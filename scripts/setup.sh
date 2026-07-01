@@ -130,6 +130,20 @@ setup_macos() {
   fi
 
   ok "All macOS dependencies are built-in (no install needed)"
+
+  warn "┌─────────────────────────────────────────────────────────────────┐"
+  warn "│  macOS system permissions required                             │"
+  warn "│                                                                 │"
+  warn "│  1. Accessibility: System Settings → Privacy & Security →       │"
+  warn "│     Accessibility → add your terminal app                       │"
+  warn "│     Needed for: mouse/keyboard input, window listing, a11y tree │"
+  warn "│                                                                 │"
+  warn "│  2. Screen Recording: System Settings → Privacy & Security →    │"
+  warn "│     Screen Recording → add your terminal app                    │"
+  warn "│     Needed for: screencapture                                   │"
+  warn "│                                                                 │"
+  warn "│  Grant to the app that will run 'ocu' (Terminal, iTerm2, etc.)  │"
+  warn "└─────────────────────────────────────────────────────────────────┘"
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -174,7 +188,7 @@ write_config() {
 
   cat > "$PREFIX/share/ocu/config.json" << 'EOF'
 {
-  "transport": "Stdio",
+  "transport": "stdio",
   "display": { "number": 0 },
   "sandbox": {
     "enabled": true,
