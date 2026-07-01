@@ -24,18 +24,25 @@ pub struct CdpClient {
 impl CdpClient {
     /// Connect to Chrome's debugging endpoint.
     /// `debug_url` is like `http://localhost:9222` or `http://127.0.0.1:9222`.
+    /// Connects to the first page target so Page.* and Runtime.* commands work.
     pub async fn connect(debug_url: &str) -> Result<Self> {
         let base = debug_url.trim_end_matches('/');
-        let info_url = format!("{}/json/version", base);
-
         let client = reqwest::Client::new();
-        let resp: Value = client.get(&info_url).send().await?.json().await?;
-        let ws_url = resp["webSocketDebuggerUrl"]
-            .as_str()
-            .context("Failed to get webSocketDebuggerUrl from Chrome. Is --remote-debugging-port set?")?
+
+        // List page targets; create one if none exist
+        let mut targets: Vec<Value> = client.get(format!("{}/json/list", base)).send().await?.json().await?;
+        if !targets.iter().any(|t| t["type"] == "page") {
+            client.get(format!("{}/json/new", base)).send().await?;
+            targets = client.get(format!("{}/json/list", base)).send().await?.json().await?;
+        }
+
+        let ws_url = targets.iter()
+            .find(|t| t["type"] == "page")
+            .and_then(|t| t["webSocketDebuggerUrl"].as_str())
+            .context("Failed to find a page target. Is Chrome running with --remote-debugging-port?")?
             .to_string();
 
-        tracing::info!("CDP connected to Chrome at {}", ws_url);
+        tracing::info!("CDP connected to Chrome page at {}", ws_url);
 
         Ok(Self {
             ws: Mutex::new(None),

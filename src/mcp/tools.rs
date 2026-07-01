@@ -573,7 +573,20 @@ impl ToolHandler for ComputerScreenshot {
             height: (r["height"].as_f64().unwrap_or(0.0) * scale) as u32,
         });
 
-        let png = ctx.platform.capture_screen(region).await?;
+        let png = match ctx.platform.capture_screen(region).await {
+            Ok(png) => png,
+            Err(_) if ctx.browser.is_some() => {
+                // Fallback to CDP Page.captureScreenshot when native screenshot fails
+                tracing::info!("Native screenshot failed, falling back to CDP capture");
+                let result = ctx.browser.unwrap().send("Page.captureScreenshot", serde_json::json!({"format": "png"})).await?;
+                let b64 = result["data"].as_str()
+                    .ok_or_else(|| anyhow::anyhow!("CDP screenshot returned no data"))?;
+                use base64::Engine;
+                base64::engine::general_purpose::STANDARD.decode(b64)?
+            }
+            Err(e) => return Err(e),
+        };
+
         use base64::Engine;
         let b64 = base64::engine::general_purpose::STANDARD.encode(&png);
 

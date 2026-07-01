@@ -34,25 +34,36 @@ impl LinuxBackend {
     }
 
     /// Capture screen via ImageMagick `import` (X11) or `grim` (Wayland)
+    /// Falls through to the next tool if one fails at runtime.
     async fn capture_via_tool(region: Option<Rect>) -> Result<Vec<u8>> {
-        // Try grim (Wayland first since it's explicit)
+        let mut last_err = anyhow::anyhow!("No screen capture tool found");
+
         if std::process::Command::new("which").arg("grim").output().is_ok() {
-            return Self::capture_via_grim(region).await;
+            match Self::capture_via_grim(region).await {
+                Ok(img) => return Ok(img),
+                Err(e) => { last_err = e; }
+            }
         }
-        // Try ImageMagick import (X11)
         if std::process::Command::new("which").arg("import").output().is_ok() {
-            return Self::capture_via_import(region).await;
+            match Self::capture_via_import(region).await {
+                Ok(img) => return Ok(img),
+                Err(e) => { last_err = e; }
+            }
         }
-        // Try scrot (X11)
         if std::process::Command::new("which").arg("scrot").output().is_ok() {
-            return Self::capture_via_scrot(region).await;
+            match Self::capture_via_scrot(region).await {
+                Ok(img) => return Ok(img),
+                Err(e) => { last_err = e; }
+            }
         }
-        // Try gnome-screenshot (X11 + Wayland)
         if std::process::Command::new("which").arg("gnome-screenshot").output().is_ok() {
-            return Self::capture_via_gnome(region).await;
+            match Self::capture_via_gnome(region).await {
+                Ok(img) => return Ok(img),
+                Err(e) => { last_err = e; }
+            }
         }
-        Err(anyhow::anyhow!(
-            "No screen capture tool found. Install: grim (Wayland), import/imagemagick (X11), scrot, or gnome-screenshot"
+        Err(last_err.context(
+            "Install: grim (Wayland), import/imagemagick (X11), scrot, or gnome-screenshot"
         ))
     }
 
