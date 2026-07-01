@@ -1,0 +1,96 @@
+[package]
+name = "ja-opencode-computer-use"
+version = "0.1.0"
+edition = "2021"
+description = "MCP server for AI agent desktop control — accessibility-first, cross-platform computer use"
+authors = ["Fen Pang"]
+repository = "https://github.com/allophylus/ja-opencode-computer-use"
+license = "MIT"
+
+[lib]
+name = "opencode_computer_use"
+path = "src/lib.rs"
+
+[[bin]]
+name = "ocu"
+path = "src/main.rs"
+
+[features]
+default = ["ollama"]
+ollama = []            # Ollama HTTP provider for local LLM inference
+local-llm = ["dep:llama-cpp-2"]  # Direct llama.cpp native backend (requires CMake + C++ compiler)
+
+[dependencies]
+# MCP protocol (implemented directly over stdio JSON-RPC)
+tokio = { version = "1", features = ["full"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Image handling
+image = "0.25"
+base64 = "0.22"
+
+# HTTP client (for Ollama / OpenAI API calls)
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# Async trait support
+async-trait = "0.1"
+
+# WebSocket (for Chrome DevTools Protocol)
+tokio-tungstenite = "0.24"
+futures-util = "0.3"
+
+# HTTP server (for SSE transport)
+axum = "0.8"
+tower = "0.5"
+tokio-stream = { version = "0.1", features = ["sync"] }
+
+# Error handling
+anyhow = "1"
+thiserror = "2"
+
+# Date/time for audit log
+chrono = { version = "0.4", features = ["serde"] }
+
+# Session IDs for SSE isolation
+uuid = { version = "1", features = ["v4"] }
+
+# Local LLM — llama.cpp native bindings (optional, feature-gated)
+llama-cpp-2 = { version = "0.1", optional = true }
+
+# Platform-specific - macOS
+[target.'cfg(target_os = "macos")'.dependencies]
+accessibility = "0.2"
+core-graphics = "0.24"
+objc2 = "0.6"
+objc2-foundation = "0.3"
+objc2-app-kit = "0.3"
+
+# Platform-specific - Windows
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_UI_Accessibility",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_Graphics_Gdi",
+    "Win32_System_Threading",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_System_Com",
+    "Win32_System_Ole",
+    "Win32_System_LibraryLoader",
+]}
+
+# Platform-specific - Linux
+[target.'cfg(target_os = "linux")'.dependencies]
+zbus = "5"
+x11rb = "0.13"
+# Input simulation via xdotool CLI (no C library linking needed)
