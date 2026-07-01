@@ -6,10 +6,10 @@ set -euo pipefail
 # Optionally builds the Rust binary and places it at ~/.local/bin/ocu.
 #
 # Usage:
-#   ./scripts/setup.sh              # install deps only
-#   ./scripts/setup.sh --build      # install deps + compile binary
-#   ./scripts/setup.sh --config     # install deps + write base config
-#   ./scripts/setup.sh --all        # deps + build + config
+#   ./scripts/setup.sh                    # install deps only
+#   ./scripts/setup.sh --build            # install deps + compile binary
+#   ./scripts/setup.sh --config           # install deps + write base config
+#   ./scripts/setup.sh --all              # deps + build + config + opencode
 # ────────────────────────────────────────────────────────────────────────────
 
 BUILD="${BUILD:-false}"
@@ -72,19 +72,12 @@ setup_linux() {
   info "Package manager: $PM"
 
   # Core input simulation & window management
-  # xdotool: mouse, keyboard, window search, geometry
   install_pkg "xdotool"
-  # wmctrl: list/focus windows
   install_pkg "wmctrl"
 
   # Screen capture (pick one)
-  # - import (ImageMagick) — X11
-  # - scrot — X11, lightweight
-  # - grim — Wayland (requires slurp for region)
-  # - gnome-screenshot — Gnome Shell
   if ! command -v import &>/dev/null && ! command -v scrot &>/dev/null \
      && ! command -v grim &>/dev/null && ! command -v gnome-screenshot &>/dev/null; then
-    # Check which display server is running
     if [ -n "${WAYLAND_DISPLAY:-}" ]; then
       install_pkg "grim"
       install_pkg "slurp"
@@ -94,9 +87,6 @@ setup_linux() {
   fi
 
   # Clipboard tools (pick one)
-  # - xclip (X11)
-  # - xsel (X11)
-  # - wl-clipboard (Wayland)
   if ! command -v xclip &>/dev/null && ! command -v xsel &>/dev/null \
      && ! command -v wl-copy &>/dev/null; then
     if [ -n "${WAYLAND_DISPLAY:-}" ]; then
@@ -108,10 +98,9 @@ setup_linux() {
 
   # Display info
   if ! command -v xdpyinfo &>/dev/null; then
-    install_pkg "x11-utils"      # provides xdpyinfo
+    install_pkg "x11-utils"
   fi
 
-  # cURL for CDP / health checks
   needs_cmd "curl"
 
   ok "All Linux dependencies installed"
@@ -123,8 +112,6 @@ setup_linux() {
 setup_macos() {
   info "Detected macOS ($ARCH)"
 
-  # All CLI tools are built-in:
-  #   screencapture, osascript, pbcopy, pbpaste
   if ! command -v osascript &>/dev/null; then
     err "osascript not found — this doesn't look like a standard macOS install"
   fi
@@ -136,13 +123,8 @@ setup_macos() {
   warn "│                                                                 │"
   warn "│  1. Accessibility: System Settings → Privacy & Security →       │"
   warn "│     Accessibility → add your terminal app                       │"
-  warn "│     Needed for: mouse/keyboard input, window listing, a11y tree │"
-  warn "│                                                                 │"
   warn "│  2. Screen Recording: System Settings → Privacy & Security →    │"
   warn "│     Screen Recording → add your terminal app                    │"
-  warn "│     Needed for: screencapture                                   │"
-  warn "│                                                                 │"
-  warn "│  Grant to the app that will run 'ocu' (Terminal, iTerm2, etc.)  │"
   warn "└─────────────────────────────────────────────────────────────────┘"
 }
 
@@ -152,7 +134,6 @@ setup_macos() {
 setup_windows() {
   info "Detected Windows ($ARCH)"
 
-  # On Windows, ocu uses PowerShell and cmd.exe exclusively.
   if ! command -v powershell &>/dev/null; then
     warn "powershell not found in PATH — ocu may not work in this shell"
   fi
@@ -231,12 +212,79 @@ write_config() {
 }
 EOF
 
-  # Replace placeholder USER with actual username
   local user="${USER:-$(whoami)}"
   sed -i "s|/home/USER|/home/$user|g" "$PREFIX/share/ocu/config.json"
 
   ok "Config written to $PREFIX/share/ocu/config.json"
-  info "Edit it to match your setup, then run: ocu --config $PREFIX/share/ocu/config.json"
+}
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  OPENCODE INTEGRATION
+# ═══════════════════════════════════════════════════════════════════════════
+# Auto-detect opencode config (XDG) and add/update computer-use MCP entry.
+# Uses jq when available; falls back to printing the snippet.
+# ────────────────────────────────────────────────────────────────────────────
+setup_opencode_integration() {
+  if ! command -v jq &>/dev/null; then
+    warn "jq not found — skipping opencode.json auto-integration."
+    info "Manually add this to your opencode config:"
+    echo ""
+    echo '    "computer-use": {'
+    echo '      "type": "local",'
+    echo '      "enabled": true,'
+    echo '      "command": "'"$PREFIX"'/bin/ocu",'
+    echo '      "args": ["--config", "'"$PREFIX"'/share/ocu/config.json"],'
+    echo '      "env": {}'
+    echo '    }'
+    echo ""
+    return
+  fi
+
+  local config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+  local opencode_dir="$config_home/opencode"
+
+  # Find the first existing opencode config file (in loading order)
+  local target=""
+  for f in "$opencode_dir/opencode.json" "$opencode_dir/config.json"; do
+    if [ -f "$f" ]; then
+      target="$f"
+      break
+    fi
+  done
+
+  # If none exists, create opencode.json
+  if [ -z "$target" ]; then
+    mkdir -p "$opencode_dir"
+    target="$opencode_dir/opencode.json"
+    echo '{}' > "$target"
+  fi
+
+  # Build the MCP entry with the user's PREFIX
+  local mcp_entry
+  mcp_entry=$(jq -n \
+    --arg cmd "$PREFIX/bin/ocu" \
+    --arg cfg "$PREFIX/share/ocu/config.json" \
+    '{
+      "type": "local",
+      "enabled": true,
+      "command": $cmd,
+      "args": ["--config", $cfg],
+      "env": {}
+    }')
+
+  # Merge into the target config (creates .mcp if missing)
+  local merged
+  merged=$(jq --argjson entry "$mcp_entry" \
+    '.mcp = ((.mcp // {}) | .["computer-use"] = $entry)' \
+    "$target") && echo "$merged" > "$target"
+
+  if [ $? -eq 0 ]; then
+    ok "OpenCode MCP entry added to $target"
+  else
+    warn "Failed to update opencode config at $target"
+    info "Add this entry manually:"
+    echo "$mcp_entry"
+  fi
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -260,16 +308,7 @@ main() {
 
   echo ""
   info "Done. Run 'ocu --help' to verify installation."
-  info "Add to opencode.json:"
-  echo ""
-  echo '    "computer-use": {'
-  echo '      "type": "local",'
-  echo '      "enabled": true,'
-  echo '      "command": "'"$PREFIX"'/bin/ocu",'
-  echo '      "args": ["--config", "'"$PREFIX"'/share/ocu/config.json"],'
-  echo '      "env": {}'
-  echo '    }'
-  echo ""
+  setup_opencode_integration
 }
 
 main
