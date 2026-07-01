@@ -14,20 +14,63 @@
 
 ## Supported Platforms
 
-| Platform | A11y Tree | Input | Screenshot | Status |
-|---|---|---|---|---|
-| macOS 12+ | ✅ AX API | ✅ CGEvent | ✅ CoreGraphics | In development |
-| Windows 10+ | ✅ UIAutomation | ✅ SendInput | ✅ DXGI | In development |
-| Linux (X11/Wayland) | ✅ AT-SPI2 | ✅ XTest/libei | ✅ X11/Wayland | Planned |
+| Platform | Tools Used | Status |
+|---|---|---|---|
+| Linux (X11/Wayland) | `xdotool`, `wmctrl`, `scrot`/`grim`/`import`, `xclip`/`xsel`/`wl-clipboard` | ✅ Tested |
+| macOS 12+ | `screencapture`, `osascript`, `pbpaste`, `pbcopy` (all built-in) | 🟡 Designed (untested) |
+| Windows 10+ | `powershell` + `System.Drawing`/`System.Windows.Forms` / `user32.dll` P/Invoke | 🟡 Designed (untested) |
 
 ## Quick Start
 
-```bash
-# Install
-cargo install --path .
+### 1. Install Dependencies
 
-# Run as stdio MCP server (default)
-ocu
+Use the setup script for your platform:
+
+```bash
+# Linux — installs xdotool, wmctrl, scrot, xclip, x11-utils
+./scripts/setup.sh
+
+# macOS — all tools are built-in (screencapture, osascript, pbcopy, pbpaste)
+./scripts/setup.sh
+
+# Windows — all tools are built-in (PowerShell, cmd.exe)
+./scripts/setup.sh
+
+# Or install + build the binary + write a default config
+./scripts/setup.sh --all
+```
+
+### 2. Build
+
+```bash
+cargo build --release
+cp target/release/ocu ~/.local/bin/
+```
+
+### 3. Run
+
+```bash
+ocu --help
+ocu                                          # stdio transport (default)
+ocu --transport sse --port 8080              # SSE transport
+ocu --config ~/.config/opencode/ocu.json     # with config file
+```
+
+### 4. Add to opencode.json
+
+```json
+{
+  "mcp": {
+    "computer-use": {
+      "type": "local",
+      "enabled": true,
+      "command": "/home/YOU/.local/bin/ocu",
+      "args": ["--config", "/home/YOU/.config/opencode/ocu.json"],
+      "env": {}
+    }
+  }
+}
+```
 
 # Run as SSE server on port 8080
 ocu --transport sse --port 8080
