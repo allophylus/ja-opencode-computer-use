@@ -225,6 +225,23 @@ EOF
 # Uses jq when available; falls back to printing the snippet.
 # ────────────────────────────────────────────────────────────────────────────
 setup_opencode_integration() {
+  # Only proceed if opencode is actually installed
+  if ! command -v opencode &>/dev/null; then
+    info "opencode not detected — skipping MCP integration."
+    info "After installing opencode, run 'ocu --config $PREFIX/share/ocu/config.json' to verify."
+    info "Then add this to your opencode config manually:"
+    echo ""
+    echo '    "computer-use": {'
+    echo '      "type": "local",'
+    echo '      "enabled": true,'
+    echo '      "command": "'"$PREFIX"'/bin/ocu",'
+    echo '      "args": ["--config", "'"$PREFIX"'/share/ocu/config.json"],'
+    echo '      "env": {}'
+    echo '    }'
+    echo ""
+    return
+  fi
+
   if ! command -v jq &>/dev/null; then
     warn "jq not found — skipping opencode.json auto-integration."
     info "Manually add this to your opencode config:"
@@ -252,11 +269,11 @@ setup_opencode_integration() {
     fi
   done
 
-  # If none exists, create opencode.json
+  # If none exists, skip — no point creating one if opencode isn't configured
   if [ -z "$target" ]; then
-    mkdir -p "$opencode_dir"
-    target="$opencode_dir/opencode.json"
-    echo '{}' > "$target"
+    info "No opencode config found at $opencode_dir — skipping integration."
+    info "Run opencode at least once to generate its config, then re-run setup.sh."
+    return
   fi
 
   # Build the MCP entry with the user's PREFIX
