@@ -1,6 +1,6 @@
-# ja-opencode-computer-use
+# Just Another OpenCode Computer Use
 
-**Desktop control MCP server for AI agents.** Gives opencode, Claude Code, Cursor, and any MCP-compatible client the ability to control desktop applications and web browsers on the host machine.
+**Desktop control MCP server for AI agents.** Gives opencode, Claude Code, Cursor, and any MCP-compatible client the ability to control desktop applications and web browsers on the host machine. Built on OS-native accessibility APIs with a CDP browser bridge, all wrapped in a safety sandbox.
 
 ## Features
 

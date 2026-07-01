@@ -1,8 +1,8 @@
-# ja-opencode-computer-use — Specification Document
+# Just Another OpenCode Computer Use — Specification Document
 
 ## 1. Overview
 
-**ja-opencode-computer-use** is an MCP (Model Context Protocol) server that gives AI coding agents (opencode, Claude Code, Cursor, etc.) the ability to control desktop applications and web browsers on the host machine. It's a cross-platform re-implementation inspired by Anthropic's Computer Use, optimized for the MCP ecosystem.
+**ja-opencode-computer-use** is an MCP (Model Context Protocol) server that gives AI coding agents (opencode, Claude Code, Cursor, etc.) the ability to control desktop applications and web browsers on the host machine. It uses OS-native accessibility APIs (osascript, xdotool, PowerShell) for deterministic UI interaction and CDP for browser control, with a safety sandbox and vision fallback.
 
 **Tagline:** *Deterministic desktop control for AI agents. Zero vision tokens by default, vision fallback when needed.*
 

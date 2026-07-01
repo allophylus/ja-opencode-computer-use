@@ -2,7 +2,7 @@
 name = "ja-opencode-computer-use"
 version = "0.1.0"
 edition = "2021"
-description = "MCP server for AI agent desktop control — accessibility-first, cross-platform computer use"
+description = "Just Another computer-use MCP server — desktop control for AI agents via OS-native accessibility and CDP browser bridge"
 authors = ["Fen Pang"]
 repository = "https://github.com/allophylus/ja-opencode-computer-use"
 license = "MIT"
